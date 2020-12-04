@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Index</title>
+</head>
+<body>
+  Выберите 2 фотографии, на каждой из которых изображен только 1 лицо. После этого нажмите add.
+<form method="POST" enctype="multipart/form-data" action="/upload">
+    <input type="file" name="file[]" multiple="">
+    <input type="submit" value="add">
+</form>
+
+
+</body>
+</html>

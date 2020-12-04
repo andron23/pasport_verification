@@ -1,0 +1,4 @@
+test.py
+.pytest_cache/
+.vscode/
+env/
