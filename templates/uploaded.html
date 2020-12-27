@@ -2,11 +2,18 @@
 <html>
 <head>
     <title>Index</title>
+    <style>
+        body {
+         background-image: url(static/background.jpg);
+         background-color: #c7b39b; /* Цвет фона */
+        }
+       </style>
 </head>
 <body>
-    Расстояние между двумя лицами: {{dist}}. Чем ближе к 0 - тем лучше.
-    <img src="{{url_for('static', filename=user_image1)}}" alt="User Image1">
-    <img src="{{url_for('static', filename=user_image2)}}" alt="User Image2">
+    
+    <H3 style="position:absolute; top:150px; left:150px; width:800px;">Расстояние между двумя лицами: {{dist}}. Чем ближе к 0 - тем лучше.</H3>
+    <img src="static/pic1.jpg" alt="User Image2" style="position: absolute; top: 250px; left: 150px; height:350px;">
+    <img src="static/pic2.jpg" alt="User Image2" style="position: absolute; top: 250px; left: 550px; height:350px;">
 
 </body>
 </html>

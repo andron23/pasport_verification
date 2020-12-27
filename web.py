@@ -77,7 +77,7 @@ def upload_file():
         for i, file in enumerate(uploaded_files):
         
             if file.filename != '':
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'))
                 image_bytes = file.read()
                 nparr = np.frombuffer(image_bytes, np.uint8)
                 user_image[f'{i+1}'] = '../' + str(UPLOAD_FOLDER) + '/' + str(file.filename)
@@ -100,6 +100,6 @@ def upload_file():
 
         dist = pdist([embs[0], embs[1]], 'cosine')[0]        
 
-    return render_template('uploaded.html', user_image1 = user_image['1'], user_image2 = user_image['2'])
+    return render_template('uploaded.html', dist = dist)
 
 app.run(debug=True)    
