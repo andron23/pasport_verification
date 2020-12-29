@@ -55,7 +55,7 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.secret_key = 'super secret key'
 app.config['SESSION_TYPE'] = 'filesystem'
 
@@ -78,10 +78,16 @@ def upload_file():
         
             if file.filename != '':
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'))
-                image_bytes = file.read()
-                nparr = np.frombuffer(image_bytes, np.uint8)
+                
+                #time.sleep(2)
+                #print(len(file))
+                #image_bytes = file.read()
+                #print(len(image_bytes))
+                #nparr = np.frombuffer(image_bytes, np.uint8)
+                img1 = cv2.imread(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'))
+                #os.remove(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'))
                 user_image[f'{i+1}'] = '../' + str(UPLOAD_FOLDER) + '/' + str(file.filename)
-                img1 = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                #img1 = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 face_rect1 =  detector(img1, 1)[0] 
                 points1 = predictor(img1, face_rect1)
                 landmarks1 = np.array([*map(lambda p: [p.x, p.y], points1.parts())])
@@ -97,9 +103,10 @@ def upload_file():
                 f1 = output1.data.numpy()
                 emb_face1 = f1[0]
                 embs.append(emb_face1)
+                
 
-        dist = pdist([embs[0], embs[1]], 'cosine')[0]        
+        dist = round(pdist([embs[0], embs[1]], 'cosine')[0], 3)        
 
     return render_template('uploaded.html', dist = dist)
 
-app.run(debug=True)    
+app.run(host='0.0.0.0', debug = True)    

@@ -2,3 +2,5 @@ test.py
 .pytest_cache/
 .vscode/
 env/
+shape_predictor_68_face_landmarks.dat
+sphere20a.pth
