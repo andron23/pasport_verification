@@ -4,3 +4,9 @@ test.py
 env/
 shape_predictor_68_face_landmarks.dat
 sphere20a.pth
+pasport_verification.ini
+pasport_verification.log
+pasport_verification.shape_predictor_68_face_landmarks
+server-side.log
+dataset/
+wsgi.py

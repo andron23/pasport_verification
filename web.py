@@ -15,6 +15,11 @@ from pathlib import Path
 import time
 from matlab_cp2tform import *
 from scipy.spatial.distance import pdist
+import logging
+from random import choice
+from string import ascii_letters
+
+logging.basicConfig(filename='server-side.log', encoding='utf-8', format='%(asctime)s :: %(levelname)s :: %(message)s', level=logging.DEBUG)
 
 
 def alignment(src_img,src_pts):
@@ -67,31 +72,43 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    uploaded_files = request.files.getlist('file[]')
+    uploaded_files_1 = request.files.getlist('file1')
+    logging.info('Uploaded file 1')
+    uploaded_files_2 = request.files.getlist('file2')
+    logging.info('Uploaded file 2')
+    uploaded_files = uploaded_files_1 + uploaded_files_2
+    logging.info('Combined files')
     user_image = {}
     embs = []
     print(len(uploaded_files))
     if len(uploaded_files) != 2:
         return render_template('index.html')
+        logging.error('More then 2 files')
     else:    
         for i, file in enumerate(uploaded_files):
         
             if file.filename != '':
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'))
-                
+                name_to_save = ''.join(choice(ascii_letters) for i in range(20))
+                file.save(os.path.join('dataset', f'{name_to_save}.jpg'))
+                logging.info('File saved')
                 #time.sleep(2)
                 #print(len(file))
                 #image_bytes = file.read()
                 #print(len(image_bytes))
                 #nparr = np.frombuffer(image_bytes, np.uint8)
                 img1 = cv2.imread(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'))
+                logging.info('File read')
                 #os.remove(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'))
                 user_image[f'{i+1}'] = '../' + str(UPLOAD_FOLDER) + '/' + str(file.filename)
                 #img1 = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 face_rect1 =  detector(img1, 1)[0] 
+                logging.info('Detection completed')
                 points1 = predictor(img1, face_rect1)
+                logging.info('Point prediction completed')
                 landmarks1 = np.array([*map(lambda p: [p.x, p.y], points1.parts())])
                 img_part1 = alignment(img1, landmarks1[INNER_EYES_AND_BOTTOM_LIP])
+                logging.info('Alignment completed')
                 imglist1 = [img_part1,cv2.flip(img_part1,1)]
                 for i in range(len(imglist1)):
                     imglist1[i] = imglist1[i].transpose(2, 0, 1).reshape((1,3,112,96))
@@ -100,13 +117,17 @@ def upload_file():
                 with torch.no_grad():
                     img_part1 = Variable(torch.from_numpy(img_part1).float())
                 output1 = net(img_part1)
+                logging.info('Photo processed with CNN')
                 f1 = output1.data.numpy()
                 emb_face1 = f1[0]
                 embs.append(emb_face1)
                 
 
-        dist = round(pdist([embs[0], embs[1]], 'cosine')[0], 3)        
+        dist = round(pdist([embs[0], embs[1]], 'cosine')[0], 3)    
+        logging.info('Dist found')    
 
     return render_template('uploaded.html', dist = dist)
 
-app.run(host='0.0.0.0', debug = True)    
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0')    
