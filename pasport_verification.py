@@ -69,7 +69,6 @@ app.config['SESSION_TYPE'] = 'filesystem'
 def index():
     return render_template('index.html')
 
-
 @app.route('/upload', methods=['POST'])
 def upload_file():
     uploaded_files_1 = request.files.getlist('file1')
@@ -131,6 +130,8 @@ def upload_file():
                     f = output.data.numpy()
                     emb_face = f[0]
                     embs.append(emb_face)
+                    cv2.rectangle(img1, (face_rect.left(), face_rect.top()), (face_rect.right(), face_rect.bottom()), (255, 125, 255), 5)
+                    cv2.imwrite(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'), img1)
                 
 
             dist = round(pdist([embs[0], embs[1]], 'cosine')[0], 3)    
