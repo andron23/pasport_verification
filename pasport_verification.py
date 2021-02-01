@@ -145,7 +145,11 @@ def upload_file():
                     f = output.data.numpy()
                     emb_face = f[0]
                     embs.append(emb_face)
-                    cv2.rectangle(img1, (face_rect.left(), face_rect.top()), (face_rect.right(), face_rect.bottom()), (255, 125, 255), 5)
+                    cv2.rectangle(img1, (face_rect.left(), face_rect.top()), (face_rect.right(), face_rect.bottom()), (255, 0, 0), 10)
+                    width = 250
+                    height = int(img1.shape[0]*(250/img1.shape[1]))
+                    logging.info(f'Old shape: {(img1.shape[0], img1.shape[1])}; New shape: {(height, width)}: (h,w).')
+                    img1 = cv2.resize(img1, (width, height))
                     cv2.imwrite(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'), img1)
                 
 
