@@ -81,9 +81,12 @@ def upload_file():
     embs = []
     logging.info(f'Length: {len(uploaded_files_1)} and {len(uploaded_files_2)}')
     try:
-        if len(uploaded_files_1) + len(uploaded_files_2) != 2:
-            return render_template('index.html')
+        if len(uploaded_files_1) + len(uploaded_files_2) < 2:
+            return render_template('retry.html', error = 'Нужно загрузить 2 изображения для начала обработки, а Вы загрузили меньше! Повторите попытку.')
             logging.error('Less then 2 files')
+        elif len(uploaded_files_1) + len(uploaded_files_2) < 2:
+            return render_template('retry.html', error = 'Нужно загрузить 2 изображения для начала обработки, а Вы загрузили больше! Повторите попытку.')
+            logging.error('More then 2 files')
         else:    
             for i, file in enumerate(uploaded_files):
         
@@ -103,7 +106,19 @@ def upload_file():
                     user_image[f'{i+1}'] = '../' + str(UPLOAD_FOLDER) + '/' + str(file.filename)
                 #img1 = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 
-                    face_rect =  detector(img1, 1)[0] 
+                    face_rect =  detector(img1, 1)
+                    if len(face_rect) < 1: 
+                        return render_template('retry.html', error = f'На фотографии {i+1} не найдено лицо! Попробуйте еще раз.')
+                        logging.error('No face found')
+                        break
+
+                    if len(face_rect) > 1: 
+                        return render_template('retry.html', error = f'На фотографии {i+1} найдено несколько лиц! Попробуйте еще раз.')
+                        logging.error('Too much faces found')
+                        break
+
+                    face_rect = face_rect[0]
+
                     logging.info('Detection completed')
                     points = predictor(img1, face_rect)
                     logging.info('Point prediction completed')
