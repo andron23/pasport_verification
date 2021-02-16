@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Index</title>
+    <style>
+        body {
+         background-image: url(static/background.jpg);
+         background-color: #c7b39b; /* Цвет фона */
+        }
+       </style>
+</head>
+<body>
+    
+    <H3 style="position:absolute; top:150px; left:150px; width:600px;">Это превью исходных фотографий. Синей рамкой отмечены найденные лица. Чтобы приступить к обработке, нажмите кнопку Обработать.</H3>
+    <img src="static/pic1_preview.jpg" alt="User Image2" style="position: absolute; top: 250px; left: 150px; height:350px;" width = "250">
+    <img src="static/pic2_preview.jpg" alt="User Image2" style="position: absolute; top: 250px; left: 550px; height:350px;" width = "250">
+
+    <form method="POST" action="/upload">
+        <input type="submit" value="Обработать" style="position:absolute; top:650px; left:200px;">
+    </form>
+    
+
+</body>
+</html>
+
+

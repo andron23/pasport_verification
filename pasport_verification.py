@@ -65,45 +65,140 @@ app.secret_key = 'super secret key'
 app.config['SESSION_TYPE'] = 'filesystem'
 
 
+def face_detection(img):
+    face_rects = detector(img, 1)
+    first_face = face_rects[0]
+    faces_amount = len(face_rects)
+
+    return faces_amount, first_face
+
+def preview_maker(img, face_rect):
+    cv2.rectangle(img, (face_rect.left(), face_rect.top()), (face_rect.right(), face_rect.bottom()), (255, 0, 0), 10)
+    width = 250
+    height = int(img.shape[0]*(250/img.shape[1]))
+    logging.info(f'Old shape: {(img.shape[0], img.shape[1])}; New shape: {(height, width)}: (h,w).')
+    preview = cv2.resize(img, (width, height))
+
+    return preview
+
+
+def photo_upload():
+    uploaded_files_1 = request.files.getlist('file1')
+    logging.info(uploaded_files_1)
+    uploaded_files_2 = request.files.getlist('file2')
+    logging.info(uploaded_files_2) 
+    if len(uploaded_files_1) > 0 and len(uploaded_files_2) > 0:
+        logging.info(uploaded_files_1[0].filename) 
+        logging.info(uploaded_files_2[0].filename)    
+        uploaded_files = uploaded_files_1 + uploaded_files_2
+        logging.info('Combined files')
+        logging.info(f'Length: {len(uploaded_files_1[0].filename)} and {len(uploaded_files_2[0].filename)}')
+        if len(uploaded_files_2[0].filename) == 0 or len(uploaded_files_1[0].filename) == 0:
+            photo_amount = 1
+        elif len(uploaded_files_2) > 1 or len(uploaded_files_1) > 1:
+            photo_amount = 3
+        else:
+            photo_amount = 2   
+    else:
+        photo_amount = 1
+        uploaded_files = []         
+    logging.info(f'Photo amount: {photo_amount}')
+    
+
+    return uploaded_files, photo_amount
+
+def photo_save(file, name):
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], name))
+    name_to_save = ''.join(choice(ascii_letters) for i in range(20))
+    file.save(os.path.join('dataset', f'{name_to_save}.jpg'))
+    logging.info('File saved')
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    uploaded_files_1 = request.files.getlist('file1')
-    logging.info('Uploaded file 1')
-    uploaded_files_2 = request.files.getlist('file2')
-    logging.info('Uploaded file 2')
-    uploaded_files = uploaded_files_1 + uploaded_files_2
-    logging.info('Combined files')
-    user_image = {}
-    embs = []
-    logging.info(f'Length: {len(uploaded_files_1)} and {len(uploaded_files_2)}')
+@app.route('/retry_less')
+def retry_less():
+    return render_template('retry_less.html')
+
+@app.route('/retry_more')
+def retry_more():
+    return render_template('retry_more.html')
+
+@app.route('/retry_no_face')
+def retry_no_face():
+    return render_template('retry_no_face.html') 
+
+@app.route('/retry_more_faces')
+def retry_more_faces():
+    return render_template('retry_more_faces.html')          
+
+@app.route('/preview', methods=['POST'])
+def preview():
+
+    uploaded_files, photo_amount = photo_upload()
+
+
+    logging.info(f'Photo amount: {photo_amount}')
+
     try:
-        if len(uploaded_files_1) + len(uploaded_files_2) < 2:
-            return render_template('retry.html', error = 'Нужно загрузить 2 изображения для начала обработки, а Вы загрузили меньше! Повторите попытку.')
+        if photo_amount < 2:
             logging.error('Less then 2 files')
-        elif len(uploaded_files_1) + len(uploaded_files_2) < 2:
-            return render_template('retry.html', error = 'Нужно загрузить 2 изображения для начала обработки, а Вы загрузили больше! Повторите попытку.')
+            return redirect(url_for('retry_less'))
+            
+            
+        elif photo_amount > 2:
             logging.error('More then 2 files')
+            return redirect(url_for('retry_more'))
+            
         else:    
             for i, file in enumerate(uploaded_files):
         
                 if file.filename != '':
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'))
-                    name_to_save = ''.join(choice(ascii_letters) for i in range(20))
-                    file.save(os.path.join('dataset', f'{name_to_save}.jpg'))
-                    logging.info('File saved')
-                #time.sleep(2)
-                #print(len(file))
-                #image_bytes = file.read()
-                #print(len(image_bytes))
-                #nparr = np.frombuffer(image_bytes, np.uint8)
+
+                    photo_save(file, name = f'pic{i+1}.jpg')
+
+                    img1 = cv2.imread(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'))
+
+                    logging.info('File read')
+
+                    face_amount, face_rect = face_detection(img1)
+
+                   # if face_amount < 1: 
+                        #logging.error('No face found')
+                        #return redirect(url_for('retry_no_face'))
+                        #break
+
+                    if face_amount > 1: 
+                        logging.error('Too much faces found')
+                        return redirect(url_for('retry_more_faces'))                                           
+                        break                
+                                        
+                    preview_photo = preview_maker(img1, face_rect)
+
+                    cv2.imwrite(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}_preview.jpg'), preview_photo)
+
+            return render_template('preview.html')
+
+    except IndexError:
+        logging.error('No face detected!') 
+        return redirect(url_for('retry_no_face'))  
+
+
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    embs = []
+    try:
+ 
+            for i in range(2):
+        
+
                     img1 = cv2.imread(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'))
                     logging.info('File read')
                 #os.remove(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'))
-                    user_image[f'{i+1}'] = '../' + str(UPLOAD_FOLDER) + '/' + str(file.filename)
+                    #user_image[f'{i+1}'] = '../' + str(UPLOAD_FOLDER) + '/' + str(file.filename)
                 #img1 = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 
                     face_rect =  detector(img1, 1)
@@ -153,14 +248,24 @@ def upload_file():
                     cv2.imwrite(os.path.join(app.config['UPLOAD_FOLDER'], f'pic{i+1}.jpg'), img1)
                 
 
-            dist = round(pdist([embs[0], embs[1]], 'cosine')[0], 3)    
+            dist = round(pdist([embs[0], embs[1]], 'cosine')[0], 3) 
+
+            if dist > 0.5 and dist < 0.6:
+                text = 'Скорее всего, это разные люди. Однако, есть небольшие сомнения - лучше попробовать еще другое фото, чтобы убедиться наверняка.'   
+            if dist > 0.6:
+                text = 'Скорее всего, это разные люди.'   
+            if dist < 0.5 and dist > 0.3:
+                text = 'Возможно, что это один и тот же человек. Но лучше проверить еще на другом фото, чтобы точно быть уверенным.'  
+            if dist < 0.3:
+                text = 'Скорее всего это один и тот же человек.'       
             logging.info('Dist found')    
 
-        return render_template('uploaded.html', dist = dist)
+            return render_template('uploaded.html', dist = dist, text = text)
 
     except IndexError:
         logging.error('No face detected!') 
         return render_template('retry.html')   
+
 
 
 if __name__ == '__main__':
