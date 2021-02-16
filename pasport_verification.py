@@ -118,6 +118,10 @@ def photo_save(file, name):
 def index():
     return render_template('index.html')
 
+@app.route('/again', methods=['POST'])
+def again():
+    return render_template('index.html')
+
 @app.route('/retry_less')
 def retry_less():
     return render_template('retry_less.html')
