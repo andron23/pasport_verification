@@ -1,0 +1,30 @@
+
+
+
+  
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Index</title>
+    <style>
+      body {
+       background-image: url(static/background.jpg); /* Путь к фоновому изображению */
+       background-color: #c7b39b; /* Цвет фона */
+      }
+     </style>
+         {{ dropzone.load_css() }}
+    {{ dropzone.style('border: 2px dashed #0087F7; margin: 10px 0 10px; min-height: 200px; width: 500px') }}
+</head>
+<body>
+  <H3 style="position:relative; top:200px; left:200px; width:500px;">{{message}}</H3>
+<form action="{{ url_for('handle_form') }}" enctype="multipart/form-data" method="post" style="position:relative; top:225px; left:200px; width:500px;">
+    {{ dropzone.create() }}
+    <input type="submit" id="submit" value="Отправить">
+</form>
+
+{{ dropzone.load_js() }}
+{{ dropzone.config() }}
+
+
+</body>
+</html>
