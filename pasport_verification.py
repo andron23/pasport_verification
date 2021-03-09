@@ -1,5 +1,6 @@
 import os
-from flask import Flask, flash, request, redirect, url_for, send_from_directory, render_template
+from flask import Flask, flash, request, redirect, url_for, send_from_directory, render_template, session
+from flask_session import Session
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
@@ -27,14 +28,17 @@ from flask_dropzone import Dropzone
 logging.basicConfig(filename='server-side.log', format='%(asctime)s :: %(levelname)s :: %(message)s', level=logging.DEBUG)
 
 
-def logger(return_res = True):
+def logger(return_res = True, show_args = True):
 
     def decorator(func):
         import time
 
         def wrapper(*args, **kwargs):
             start = time.time()
-            logging.info(f'Function {func.__name__} started with arguments {args} and {kwargs}')
+            if show_args:
+              logging.info(f'Function {func.__name__} started with arguments {args} and {kwargs}')
+            else:
+              logging.info(f'Function {func.__name__} started')
 
             try:
                 res = func(*args, **kwargs)
@@ -55,7 +59,7 @@ def logger(return_res = True):
     return decorator      
 
 
-@logger(return_res=False)
+@logger(return_res=False, show_args = False)
 def alignment(src_img,src_pts):
     ref_pts = [ [30.2946, 51.6963],[65.5318, 51.5014],
         [48.0252, 71.7366],[33.5493, 92.3655],[62.7299, 92.2041] ]
@@ -111,7 +115,10 @@ app.config.update(
     DROPZONE_UPLOAD_BTN_ID='submit',
     )
 
-@logger()
+Session(app)
+
+
+@logger(show_args = False)
 def face_detection(img):
     face_rects = detector(img, 1)
     first_face = face_rects[0]
@@ -119,17 +126,17 @@ def face_detection(img):
 
     return faces_amount, first_face
 
-@logger(return_res=False)
+@logger(return_res=False, show_args = False)
 def rect_maker(img, face_rect):
   cv2.rectangle(img, (face_rect.left(), face_rect.top()), (face_rect.right(), face_rect.bottom()), (255, 0, 0), 6)
   return None
 
-@logger(return_res=False)
+@logger(return_res=False, show_args = False)
 def recolor(img): 
   img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
   return img
   
-@logger(return_res=False)
+@logger(return_res=False, show_args = False)
 def preview_maker(img, need_rect = False, face_rect = None):
     
     k = img.shape[1]/img.shape[0] #width/height
@@ -155,12 +162,12 @@ def img_read(path):
   return cv2.imread(path)
 
 
-@logger()
+@logger(show_args = False)
 def prediction(img, face_rect):
   return predictor(img, face_rect)  
 
 
-@logger(return_res=False)
+@logger(return_res=False, show_args = False)
 def cnn_processing(img):
     imglist = [img,cv2.flip(img,1)]
     for j in range(len(imglist)):
@@ -197,14 +204,12 @@ def index():
 
 @app.route('/first_upload', methods=['POST'])
 def handle_upload():
-  global count 
-  global file_names
-  count = 0
-  file_names = {}
+  session["count"] = 0
+  session["file_names"] = {}
   for key, file in request.files.items():
         if key.startswith('file'):
-            count += 1
-            file_names[f'file{count}'] = file.filename
+            session["count"] += 1
+            session["file_names"][f'file{session["count"]}'] = file.filename
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
 
   return ''
@@ -214,20 +219,17 @@ def handle_upload():
 
 @app.route('/form', methods=['POST'])
 def handle_form(): 
-  global count
-  global file_names
-  global face_rectangles
 
+  session["face_rectangles"] = {}
 
-  face_rectangles = {}
   preview_names = {}
   w = {}
 
-  if count != 2:
+  if session["count"] != 2:
     return render_template('index-test.html', message = 'Вы загрузили меньше 2 фотографий, попробуйте еще раз.')
 
   else: 
-    for key, name in file_names.items(): 
+    for key, name in session["file_names"].items(): 
       img1 = img_read('static/' + name)
       img1, _ = preview_maker(img1)
       img_to_detection = recolor(img1)
@@ -240,7 +242,7 @@ def handle_form():
       if face_amount > 1: 
         return render_template('index-test.html', message = 'На фотографиях изображено слишком много лиц. Загрузите фотографию, где изображено только одно лицо.')
 
-      face_rectangles[name] = face_rect      
+      session["face_rectangles"][name] = face_rect      
       
       preview_photo, w[key] = preview_maker(img1, need_rect=True, face_rect=face_rect) 
       cv2.imwrite(os.path.join(app.config['UPLOAD_FOLDER'], f'{name}_preview.jpg'), preview_photo)
@@ -252,20 +254,15 @@ def handle_form():
 @app.route('/upload', methods=['POST'])
 def upload_file():
 
-    global file_names
-    global face_rectangles
-
-    logging.info(f'face_rects: {face_rectangles}')
-
     embs = []
     names = {}
     w = {}
 
     try:
 
-      for key, name in file_names.items(): 
+      for key, name in session["file_names"].items(): 
         img1 = img_read('static/' + name)   
-        face_rect = face_rectangles[name]
+        face_rect = session["face_rectangles"][name]
 
         points = prediction(img1, face_rect)
         landmarks = np.array([*map(lambda p: [p.x, p.y], points.parts())])
