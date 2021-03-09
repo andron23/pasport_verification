@@ -24,8 +24,38 @@ from flask_images import resized_img_src, Images
 
 from flask_dropzone import Dropzone
 
-logging.basicConfig(filename='server-side-test.log', format='%(asctime)s :: %(levelname)s :: %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename='server-side.log', format='%(asctime)s :: %(levelname)s :: %(message)s', level=logging.DEBUG)
 
+
+def logger(return_res = True):
+
+    def decorator(func):
+        import time
+
+        def wrapper(*args, **kwargs):
+            start = time.time()
+            logging.info(f'Function {func.__name__} started with arguments {args} and {kwargs}')
+
+            try:
+                res = func(*args, **kwargs)
+                finish = time.time() 
+                if return_res:
+                  logging.info(f'Function {func.__name__} finished in {finish-start} sec with result {res}')
+                else:
+                  logging.info(f'Function {func.__name__} finished in {finish-start} sec')
+                
+            except Exception as exc:
+                finish = time.time()
+                logging.error(f'Function {func.__name__} crashed with Exception {exc} in {finish-start} sec') 
+
+            return res    
+
+        return wrapper   
+
+    return decorator      
+
+
+@logger(return_res=False)
 def alignment(src_img,src_pts):
     ref_pts = [ [30.2946, 51.6963],[65.5318, 51.5014],
         [48.0252, 71.7366],[33.5493, 92.3655],[62.7299, 92.2041] ]
@@ -81,7 +111,7 @@ app.config.update(
     DROPZONE_UPLOAD_BTN_ID='submit',
     )
 
-
+@logger()
 def face_detection(img):
     face_rects = detector(img, 1)
     first_face = face_rects[0]
@@ -89,17 +119,17 @@ def face_detection(img):
 
     return faces_amount, first_face
 
-
+@logger(return_res=False)
 def rect_maker(img, face_rect):
   cv2.rectangle(img, (face_rect.left(), face_rect.top()), (face_rect.right(), face_rect.bottom()), (255, 0, 0), 6)
   return None
 
-
+@logger(return_res=False)
 def recolor(img): 
   img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
   return img
   
-
+@logger(return_res=False)
 def preview_maker(img, need_rect = False, face_rect = None):
     
     k = img.shape[1]/img.shape[0] #width/height
@@ -111,10 +141,8 @@ def preview_maker(img, need_rect = False, face_rect = None):
         width = int(h_max*k)
     else: 
         height = int(w_max/k)
-        width = int(w_max)
-
+        width = int(w_max)    
     
-    logging.info(f'Old shape: {(img.shape[0], img.shape[1])}; New shape: {(height, width)}: (h,w).')
     preview = cv2.resize(img, (width, height))
 
     if need_rect: 
@@ -122,6 +150,41 @@ def preview_maker(img, need_rect = False, face_rect = None):
 
     return preview, width
 
+@logger(return_res=False)
+def img_read(path):
+  return cv2.imread(path)
+
+
+@logger()
+def prediction(img, face_rect):
+  return predictor(img, face_rect)  
+
+
+@logger(return_res=False)
+def cnn_processing(img):
+    imglist = [img,cv2.flip(img,1)]
+    for j in range(len(imglist)):
+        imglist[j] = imglist[j].transpose(2, 0, 1).reshape((1,3,112,96))
+        imglist[j] = (imglist[j]-127.5)/128.0
+    img_part = np.vstack(imglist)
+    with torch.no_grad():
+        img_part = Variable(torch.from_numpy(img_part).float())
+
+    output = net(img_part)
+
+    return output.data.numpy()
+
+@logger()
+def verification(dist):
+    if dist > 0.5 and dist < 0.6:
+        text = 'Скорее всего, это разные люди. Однако, есть небольшие сомнения - лучше попробовать еще другое фото, чтобы убедиться наверняка.'   
+    if dist > 0.6:
+        text = 'Скорее всего, это разные люди.'   
+    if dist < 0.5 and dist > 0.3:
+        text = 'Возможно, что это один и тот же человек. Но лучше проверить еще на другом фото, чтобы точно быть уверенным.'  
+    if dist < 0.3:
+        text = 'Скорее всего это один и тот же человек.'
+    return text       
 
 @app.route('/again', methods=['POST'])
 def again():
@@ -140,13 +203,9 @@ def handle_upload():
   file_names = {}
   for key, file in request.files.items():
         if key.startswith('file'):
-            logging.info(key)
             count += 1
-            logging.info(f'First {count} files')
             file_names[f'file{count}'] = file.filename
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
-            logging.info(file_names)
-
 
   return ''
 
@@ -159,49 +218,33 @@ def handle_form():
   global file_names
   global face_rectangles
 
-  time.sleep(1)
 
   face_rectangles = {}
-
   preview_names = {}
-
   w = {}
 
   if count != 2:
     return render_template('index-test.html', message = 'Вы загрузили меньше 2 фотографий, попробуйте еще раз.')
+
   else: 
-    logging.info(f'Count: {count}')
-    logging.info(f'file_names: {file_names}')
-    logging.info(f'face_recs: {face_rectangles}')
     for key, name in file_names.items(): 
-      img1 = cv2.imread('static/' + name)
-      logging.info(img1)
-      logging.info('File read')
+      img1 = img_read('static/' + name)
       img1, _ = preview_maker(img1)
       img_to_detection = recolor(img1)
 
       try:
         face_amount, face_rect = face_detection(img_to_detection)
       except IndexError: 
-        logging.info('No face found!')
-        return render_template('index-test.html', message = 'Похоже, на одной из фотографий не найдено лицо. Попробуйте загрузить другие фото.') 
-        #break
-
-
-    
+        return render_template('index-test.html', message = 'Похоже, на одной из фотографий не найдено лицо. Попробуйте загрузить другие фото.')   
 
       if face_amount > 1: 
-                        logging.error('Too much faces found')
-                        return render_template('index-test.html', message = 'На фотографиях изображено слишком много лиц. Загрузите фотографию, где изображено только одно лицо.')                                           
-                        #break  
+        return render_template('index-test.html', message = 'На фотографиях изображено слишком много лиц. Загрузите фотографию, где изображено только одно лицо.')
 
-      face_rectangles[name] = face_rect
-      
+      face_rectangles[name] = face_rect      
       
       preview_photo, w[key] = preview_maker(img1, need_rect=True, face_rect=face_rect) 
       cv2.imwrite(os.path.join(app.config['UPLOAD_FOLDER'], f'{name}_preview.jpg'), preview_photo)
-      preview_names[key] = f'{name}_preview.jpg' #поменять
-                     
+      preview_names[key] = f'{name}_preview.jpg' #поменять                     
 
     return render_template('preview-test.html', img1 = preview_names['file1'], w1 = w['file1'],  img2 = preview_names['file2'], w2 = w['file2'])
 
@@ -217,33 +260,18 @@ def upload_file():
     embs = []
     names = {}
     w = {}
+
     try:
 
       for key, name in file_names.items(): 
-        img1 = cv2.imread('static/' + name)   
+        img1 = img_read('static/' + name)   
         face_rect = face_rectangles[name]
 
-        points = predictor(img1, face_rect)
-        logging.info('Point prediction completed')
+        points = prediction(img1, face_rect)
         landmarks = np.array([*map(lambda p: [p.x, p.y], points.parts())])
-        img_part = alignment(img1, landmarks[INNER_EYES_AND_BOTTOM_LIP])
-        logging.info('Alignment completed')
-        imglist = [img_part,cv2.flip(img_part,1)]
-        for j in range(len(imglist)):
-                        imglist[j] = imglist[j].transpose(2, 0, 1).reshape((1,3,112,96))
-                        imglist[j] = (imglist[j]-127.5)/128.0
-        img_part = np.vstack(imglist)
-        logging.info('Vstack completed')
-        start = time.time()
-        with torch.no_grad():
-                        logging.info('Test completed')
-                        img_part = Variable(torch.from_numpy(img_part).float())
-                        logging.info('Variable completed')
-        output = net(img_part)
-        finish = time.time() - start
-        logging.info('Photo processed with CNN')
-        logging.info(f'CNN processinf time: {finish}')
-        f = output.data.numpy()
+
+        img_part = alignment(img1, landmarks[INNER_EYES_AND_BOTTOM_LIP])        
+        f = cnn_processing(img_part)
         emb_face = f[0]
         embs.append(emb_face)
         preview, w[key] = preview_maker(img1, need_rect=True, face_rect=face_rect)
@@ -252,15 +280,7 @@ def upload_file():
 
       dist = round(pdist([embs[0], embs[1]], 'cosine')[0], 3) 
 
-      if dist > 0.5 and dist < 0.6:
-                text = 'Скорее всего, это разные люди. Однако, есть небольшие сомнения - лучше попробовать еще другое фото, чтобы убедиться наверняка.'   
-      if dist > 0.6:
-                text = 'Скорее всего, это разные люди.'   
-      if dist < 0.5 and dist > 0.3:
-                text = 'Возможно, что это один и тот же человек. Но лучше проверить еще на другом фото, чтобы точно быть уверенным.'  
-      if dist < 0.3:
-                text = 'Скорее всего это один и тот же человек.'       
-      logging.info('Dist found')    
+      text = verification(dist)
 
       return render_template('uploaded-test.html', dist = dist, text = text, img1 = names['file1'], w1 = w['file1'], img2 = names['file2'], w2 = w['file2'])
 
