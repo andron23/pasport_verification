@@ -11,7 +11,7 @@ pasport_verification.shape_predictor_68_face_landmarks
 server-side.log
 dataset/
 profile_dir/
-static/
+static/*
 !static/background.jpg
 wsgi.py
 face_detector_profile*
