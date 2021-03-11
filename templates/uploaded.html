@@ -4,18 +4,50 @@
     <title>Index</title>
     <style>
         body {
-         background-image: url(static/background.jpg);
-         background-color: #c7b39b; /* Цвет фона */
+         background-image: url(static/background.png); /* Путь к фоновому изображению */
+         background-color: #131a3e; /* Цвет фона */
+         background-size: cover;
+  
         }
+  
+        .block {
+          display: block;
+          border-radius: 12px;
+          border: 2px solid #4e3b26;
+          background-color: #4e3b26;
+          color: #f3efe7;
+          padding: 14px 28px;
+          font-size: 16px;
+          cursor: pointer;
+          text-align: center;
+          position:relative; 
+          top:30px
+              }
+  
+        .block:hover {
+          background-color: #f3efe7;
+          color: black;
+              }
+  
+         h3 {
+             font-family: Courier, monospace;
+             color: #4e3b26;
+             position:relative; 
+             top:200px; 
+             left:100px; 
+             width:500px;
+         }     
+  
+  
        </style>
 </head>
 <body>
     
-    <H3 style="position:absolute; top:150px; left:150px; width:600px;">Расстояние между двумя лицами: {{dist}}. {{text}}</H3>
-    <img src="static/pic1.jpg" alt="User Image2" style="position: absolute; top: 250px; left: 150px; height:350px;" width = "250">
-    <img src="static/pic2.jpg" alt="User Image2" style="position: absolute; top: 250px; left: 550px; height:350px;" width = "250">
+    <H3>Расстояние между двумя лицами: {{dist}}. <br> {{text}}</H3>
+    <img src="{{url_for('static', filename = img1, width = w1)}}" alt="User Image2" style="position: absolute; top: 350px; left: 100px;">
+    <img src="{{url_for('static', filename = img2, width = w2)}}" alt="User Image2" style="position: absolute; top: 350px; left: 365px;">
     <form method="POST" enctype="multipart/form-data" action="/again">
-        <input type="submit" value="Обработать другие фото" style="position:relative; top:700px; left:200px;">
+        <input type="submit" value="Обработать другие фото" style="position:absolute; top:720px; left:100px" class = "block">
     
 
 </body>

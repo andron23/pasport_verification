@@ -51,6 +51,7 @@ def logger(return_res = True, show_args = True):
             except Exception as exc:
                 finish = time.time()
                 logging.error(f'Function {func.__name__} crashed with Exception {exc} in {finish-start} sec') 
+                return ''
 
             return res    
 
@@ -118,7 +119,7 @@ app.config.update(
 Session(app)
 
 
-@logger(show_args = False)
+@logger()
 def face_detection(img):
     face_rects = detector(img, 1)
     first_face = face_rects[0]
@@ -128,10 +129,10 @@ def face_detection(img):
 
 @logger(return_res=False, show_args = False)
 def rect_maker(img, face_rect):
-  cv2.rectangle(img, (face_rect.left(), face_rect.top()), (face_rect.right(), face_rect.bottom()), (255, 0, 0), 6)
+  cv2.rectangle(img, (face_rect.left(), face_rect.top()), (face_rect.right(), face_rect.bottom()), (122, 96, 87), 6)
   return None
 
-@logger(return_res=False, show_args = False)
+@logger()
 def recolor(img): 
   img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
   return img
@@ -139,9 +140,12 @@ def recolor(img):
 @logger(return_res=False, show_args = False)
 def preview_maker(img, need_rect = False, face_rect = None):
     
+    if need_rect: 
+      rect_maker(img, face_rect)
+
     k = img.shape[1]/img.shape[0] #width/height
     w_max = 250
-    h_max = 450
+    h_max = 400
 
     if w_max/k > h_max:
         heigth = int(h_max)
@@ -152,12 +156,11 @@ def preview_maker(img, need_rect = False, face_rect = None):
     
     preview = cv2.resize(img, (width, height))
 
-    if need_rect: 
-      rect_maker(preview, face_rect)
+    
 
     return preview, width
 
-@logger(return_res=False)
+@logger()
 def img_read(path):
   return cv2.imread(path)
 
@@ -183,23 +186,23 @@ def cnn_processing(img):
 
 @logger()
 def verification(dist):
-    if dist > 0.5 and dist < 0.6:
+    if dist > 0.4 and dist < 0.6:
         text = 'Скорее всего, это разные люди. Однако, есть небольшие сомнения - лучше попробовать еще другое фото, чтобы убедиться наверняка.'   
     if dist > 0.6:
         text = 'Скорее всего, это разные люди.'   
-    if dist < 0.5 and dist > 0.3:
+    if dist < 0.4 and dist > 0.2:
         text = 'Возможно, что это один и тот же человек. Но лучше проверить еще на другом фото, чтобы точно быть уверенным.'  
-    if dist < 0.3:
+    if dist < 0.2:
         text = 'Скорее всего это один и тот же человек.'
     return text       
 
 @app.route('/again', methods=['POST'])
 def again():
-    return render_template('index-test.html', message = 'Загрузите новые фотографии, на каждой из которых изображено только 1 лицо. После этого нажмите кнопку "Отправить".')
+    return render_template('index.html', message = 'Загрузите новые фотографии, на каждой из которых изображено только 1 лицо. После этого нажмите кнопку "Отправить".')
 
 @app.route('/')
 def index():
-    return render_template('index-test.html', message = 'Выберите 2 фотографии, на каждой из которых изображено только 1 лицо. После этого нажмите кнопку "Отправить".')
+    return render_template('index.html', message = 'Выберите 2 фотографии, на каждой из которых изображено только 1 лицо. После этого нажмите кнопку "Отправить".')
 
 
 @app.route('/first_upload', methods=['POST'])
@@ -226,29 +229,29 @@ def handle_form():
   w = {}
 
   if session["count"] != 2:
-    return render_template('index-test.html', message = 'Вы загрузили меньше 2 фотографий, попробуйте еще раз.')
+    return render_template('index.html', message = 'Вы загрузили меньше 2 фотографий, попробуйте еще раз.')
 
   else: 
     for key, name in session["file_names"].items(): 
       img1 = img_read('static/' + name)
-      img1, _ = preview_maker(img1)
+      #img1, _ = preview_maker(img)
       img_to_detection = recolor(img1)
 
       try:
-        face_amount, face_rect = face_detection(img_to_detection)
-      except IndexError: 
-        return render_template('index-test.html', message = 'Похоже, на одной из фотографий не найдено лицо. Попробуйте загрузить другие фото.')   
+        face_amount, face_rect = face_detection(img_to_detection)        
+      except: 
+        return render_template('index.html', message = 'Похоже, на одной из фотографий не найдено лицо. Попробуйте загрузить другие фото.')   
 
       if face_amount > 1: 
-        return render_template('index-test.html', message = 'На фотографиях изображено слишком много лиц. Загрузите фотографию, где изображено только одно лицо.')
+        return render_template('index.html', message = 'На фотографиях изображено слишком много лиц. Загрузите фотографию, где изображено только одно лицо.')
 
       session["face_rectangles"][name] = face_rect      
       
-      preview_photo, w[key] = preview_maker(img1, need_rect=True, face_rect=face_rect) 
+      preview_photo, w[key] = preview_maker(img1, need_rect=True, face_rect=face_rect)
       cv2.imwrite(os.path.join(app.config['UPLOAD_FOLDER'], f'{name}_preview.jpg'), preview_photo)
       preview_names[key] = f'{name}_preview.jpg' #поменять                     
 
-    return render_template('preview-test.html', img1 = preview_names['file1'], w1 = w['file1'],  img2 = preview_names['file2'], w2 = w['file2'])
+    return render_template('preview.html', img1 = preview_names['file1'], w1 = w['file1'],  img2 = preview_names['file2'], w2 = w['file2'])
 
 
 @app.route('/upload', methods=['POST'])
@@ -279,11 +282,11 @@ def upload_file():
 
       text = verification(dist)
 
-      return render_template('uploaded-test.html', dist = dist, text = text, img1 = names['file1'], w1 = w['file1'], img2 = names['file2'], w2 = w['file2'])
+      return render_template('uploaded.html', dist = dist, text = text, img1 = names['file1'], w1 = w['file1'], img2 = names['file2'], w2 = w['file2'])
 
     except IndexError:
         logging.error('No face detected!') 
-        return render_template('index-test.html', message = 'Похоже, на одной из фотографий не найдено лицо. Попробуйте загрузить другие фото.')   
+        return render_template('index.html', message = 'Похоже, на одной из фотографий не найдено лицо. Попробуйте загрузить другие фото.')   
 
     
 app.config['PROFILE'] = True

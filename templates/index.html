@@ -4,18 +4,58 @@
     <title>Index</title>
     <style>
       body {
-       background-image: url(static/background.jpg); /* Путь к фоновому изображению */
-       background-color: #c7b39b; /* Цвет фона */
+       background-image: url(static/background.png); /* Путь к фоновому изображению */
+       background-color: #131a3e; /* Цвет фона */
+       background-size: cover;
+
       }
+
+      .block {
+        display: block;
+        border-radius: 12px;
+        border: 2px solid #4e3b26;
+        background-color: #4e3b26;
+        color: #f3efe7;
+        padding: 14px 28px;
+        font-size: 16px;
+        cursor: pointer;
+        text-align: center;
+        position:relative; 
+        top:30px
+            }
+
+      .block:hover {
+        background-color: #f3efe7;
+        color: black;
+            }
+
+       h3 {
+           font-family: Courier, monospace;
+           color: #4e3b26;
+           position:relative; 
+           top:200px; 
+           left:100px; 
+           width:500px;
+       }     
+
+
      </style>
+
+
+    {{ dropzone.load_css() }}
+    {{ dropzone.style('border: 2px dashed #9b816d; margin: 10px 0 10px; min-height: 170px; width: 500px; background-color: #f3efe7') }}
+
+
 </head>
 <body>
-  <H3 style="position:relative; top:200px; left:200px; width:375px;">Выберите 2 фотографии, на каждой из которых изображено только 1 лицо. После этого нажмите Отправить.</H3>
-<form method="POST" enctype="multipart/form-data" action="/preview">
-    <input type="file" name="file1" style="position:relative;  top:225px; left:200px;">
-    <input type="file" name="file2" style="position:relative;  top:225px; left:200px;">
-    <input type="submit" value="Отправить" style="position:relative; top:225px; left:200px;">
+  <H3>{{message}}</H3>
+<form action="{{ url_for('handle_form') }}" enctype="multipart/form-data" method="post" style="position:relative; top:210px; left:100px; width:500px;">
+    {{ dropzone.create() }}
+    <input type="submit" id="submit" value="Отправить" class = "block">
 </form>
+
+{{ dropzone.load_js() }}
+{{ dropzone.config() }}
 
 
 </body>
