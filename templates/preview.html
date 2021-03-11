@@ -38,17 +38,25 @@
              width:500px;
          } 
 
+         img {
+    float: left;
+    width:  250px;
+    height: 400px;
+    object-fit: cover;
+            } 
+
+
   
        </style>
 </head>
 <body>
     
     <H3>Это превью исходных фотографий. <br> Синей рамкой отмечены найденные лица. <br> Чтобы приступить к обработке, нажмите кнопку "Обработать".</H3>
-    <img src="{{url_for('static', filename = img1, width = w1)}}" alt="User Image2" style="position: absolute; top: 350px; left: 100px;">
-    <img src="{{url_for('static', filename = img2, width = w2)}}" alt="User Image2" style="position: absolute; top: 350px; left: 365px;">
+    <img src="{{url_for('static', filename = img1)}}" alt="User Image2" style="position: absolute; top: 335px; left: 100px;">
+    <img src="{{url_for('static', filename = img2)}}" alt="User Image2" style="position: absolute; top: 335px; left: 365px;">
 
     <form method="POST" action="/upload">
-        <input type="submit" value="Обработать" style="position:absolute; top:720px; left:100px" class = "block">
+        <input type="submit" value="Обработать" style="position:absolute; top:765px; left:100px" class = "block">
     </form>
     
 

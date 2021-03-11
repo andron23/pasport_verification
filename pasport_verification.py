@@ -226,7 +226,7 @@ def handle_form():
   session["face_rectangles"] = {}
 
   preview_names = {}
-  w = {}
+  
 
   if session["count"] != 2:
     return render_template('index.html', message = 'Вы загрузили меньше 2 фотографий, попробуйте еще раз.')
@@ -247,11 +247,12 @@ def handle_form():
 
       session["face_rectangles"][name] = face_rect      
       
-      preview_photo, w[key] = preview_maker(img1, need_rect=True, face_rect=face_rect)
-      cv2.imwrite(os.path.join(app.config['UPLOAD_FOLDER'], f'{name}_preview.jpg'), preview_photo)
+      #preview_photo, w[key] = preview_maker(img1, need_rect=True, face_rect=face_rect)
+      rect_maker(img1, face_rect)
+      cv2.imwrite(os.path.join(app.config['UPLOAD_FOLDER'], f'{name}_preview.jpg'), img1)
       preview_names[key] = f'{name}_preview.jpg' #поменять                     
 
-    return render_template('preview.html', img1 = preview_names['file1'], w1 = w['file1'],  img2 = preview_names['file2'], w2 = w['file2'])
+    return render_template('preview.html', img1 = preview_names['file1'],  img2 = preview_names['file2'])
 
 
 @app.route('/upload', methods=['POST'])
@@ -259,7 +260,7 @@ def upload_file():
 
     embs = []
     names = {}
-    w = {}
+    
 
     try:
 
@@ -274,15 +275,16 @@ def upload_file():
         f = cnn_processing(img_part)
         emb_face = f[0]
         embs.append(emb_face)
-        preview, w[key] = preview_maker(img1, need_rect=True, face_rect=face_rect)
-        cv2.imwrite(os.path.join(app.config['UPLOAD_FOLDER'], f'{name}_final.jpg'), preview)
+        #preview, w[key] = preview_maker(img1, need_rect=True, face_rect=face_rect)
+        rect_maker(img1, face_rect)
+        cv2.imwrite(os.path.join(app.config['UPLOAD_FOLDER'], f'{name}_final.jpg'), img1)
         names[key] = f'{name}_final.jpg'
 
       dist = round(pdist([embs[0], embs[1]], 'cosine')[0], 3) 
 
       text = verification(dist)
 
-      return render_template('uploaded.html', dist = dist, text = text, img1 = names['file1'], w1 = w['file1'], img2 = names['file2'], w2 = w['file2'])
+      return render_template('uploaded.html', dist = dist, text = text, img1 = names['file1'], img2 = names['file2'])
 
     except IndexError:
         logging.error('No face detected!') 
