@@ -119,7 +119,7 @@ app.config.update(
 Session(app)
 
 
-@logger()
+@logger(return_res=False)
 def face_detection(img):
     face_rects = detector(img, 1)
     first_face = face_rects[0]
@@ -129,10 +129,10 @@ def face_detection(img):
 
 @logger(return_res=False, show_args = False)
 def rect_maker(img, face_rect):
-  cv2.rectangle(img, (face_rect.left(), face_rect.top()), (face_rect.right(), face_rect.bottom()), (122, 96, 87), 6)
+  cv2.rectangle(img, (face_rect.left(), face_rect.top()), (face_rect.right(), face_rect.bottom()), (122, 96, 87), 7)
   return None
 
-@logger()
+@logger(return_res=False, show_args = False)
 def recolor(img): 
   img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
   return img
@@ -280,11 +280,16 @@ def upload_file():
         cv2.imwrite(os.path.join(app.config['UPLOAD_FOLDER'], f'{name}_final.jpg'), img1)
         names[key] = f'{name}_final.jpg'
 
-      dist = round(pdist([embs[0], embs[1]], 'cosine')[0], 3) 
+      dist = round(pdist([embs[0], embs[1]], 'cosine')[0], 3)
+
+      if dist > 0 and dist < 1: 
+        similarity = round((1 - dist)*100, 0)
+      else: 
+        similarity = 0   
 
       text = verification(dist)
 
-      return render_template('uploaded.html', dist = dist, text = text, img1 = names['file1'], img2 = names['file2'])
+      return render_template('uploaded.html', similarity = similarity, text = text, img1 = names['file1'], img2 = names['file2'])
 
     except IndexError:
         logging.error('No face detected!') 

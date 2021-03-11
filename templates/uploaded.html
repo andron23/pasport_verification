@@ -51,7 +51,7 @@
 </head>
 <body>
     
-    <H3>Расстояние между двумя лицами: {{dist}}. <br> {{text}}</H3>
+    <H3>Совпадение: {{similarity}}%. <br> {{text}}</H3>
     <img src="{{url_for('static', filename = img1)}}" alt="User Image2" style="position: absolute; top: 335px; left: 100px;">
     <img src="{{url_for('static', filename = img2)}}" alt="User Image2" style="position: absolute; top: 335px; left: 365px;">
     <form method="POST" enctype="multipart/form-data" action="/again">
