@@ -12,7 +12,7 @@ server-side.log
 dataset/
 profile_dir/
 static/*
-!static/background.jpg
+!static/background.png
 wsgi.py
 face_detector_profile*
 print_pstat.py
